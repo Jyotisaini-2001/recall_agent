@@ -1,0 +1,42 @@
+{
+  "errors_processed": 13,
+  "fast_count": 13,
+  "slow_count": 0,
+  "tokens_spent": 0,
+  "tokens_saved": 38220,
+  "skills_in_library": 0,
+  "log": [
+    "[FAST] missing-colon-def-statement \u2014 3806ms  |  ~2,940 tokens saved",
+    "[FAST] missing-colon-def-statement \u2014 5584ms  |  ~2,940 tokens saved",
+    "[FAST] missing-colon-def-statement \u2014 3522ms  |  ~2,940 tokens saved",
+    "[FAST] fix-list-index-out-of-range \u2014 3774ms  |  ~2,940 tokens saved",
+    "[FAST] dict-key-safe-access \u2014 3937ms  |  ~2,940 tokens saved",
+    "[FAST] fix-list-index-out-of-range \u2014 13509ms  |  ~2,940 tokens saved",
+    "[FAST] missing-colon-def-statement \u2014 3882ms  |  ~2,940 tokens saved",
+    "[FAST] module-not-found \u2014 633328ms  |  ~2,940 tokens saved",
+    "[FAST] word-to-int-conversion \u2014 10836ms  |  ~2,940 tokens saved",
+    "[FAST] dict-key-safe-access \u2014 3810ms  |  ~2,940 tokens saved",
+    "[FAST] missing-colon-def-statement \u2014 3968ms  |  ~2,940 tokens saved",
+    "[FAST] dict-key-safe-access \u2014 5319ms  |  ~2,940 tokens saved",
+    "[FAST] fix-indentation-error \u2014 4370ms  |  ~2,940 tokens saved"
+  ],
+  "baseline_tokens_spent": 8730,
+  "baseline_errors_count": 14,
+  "baseline_avg_per_error": 623,
+  "baseline_log": [
+    "[BASELINE] SyntaxError: invalid syntax (2992730964.py, line 1 \u2014 318 tokens used  |  provider: claude-local",
+    "[BASELINE] TypeError: can only concatenate str (not \"int\") to \u2014 608 tokens used  |  provider: claude-local",
+    "[BASELINE] IndexError: list index out of range \u2014 522 tokens used  |  provider: claude-local",
+    "[BASELINE] ModuleNotFoundError: No module named 'data_magic' \u2014 672 tokens used  |  provider: claude-local",
+    "[BASELINE] KeyError: 'email' \u2014 500 tokens used  |  provider: claude-local",
+    "[BASELINE] ModuleNotFoundError: No module named 'word2number' \u2014 700 tokens used  |  provider: claude-local",
+    "[BASELINE] AttributeError: 'list' object has no attribute 'pu \u2014 492 tokens used  |  provider: claude-local",
+    "[BASELINE] ZeroDivisionError: division by zero \u2014 585 tokens used  |  provider: claude-local",
+    "[BASELINE] ModuleNotFoundError: No module named 'data_magic' \u2014 505 tokens used  |  provider: claude-local",
+    "[BASELINE] ValueError: invalid literal for int() with base 10 \u2014 609 tokens used  |  provider: claude-local",
+    "[BASELINE] RecursionError: maximum recursion depth exceeded \u2014 791 tokens used  |  provider: claude-local",
+    "[BASELINE] UnboundLocalError: local variable 'score' referenc \u2014 664 tokens used  |  provider: claude-local",
+    "[BASELINE] KeyError: 'name' \u2014 1297 tokens used  |  provider: claude-local",
+    "[BASELINE] IndentationError: unindent does not match any oute \u2014 467 tokens used  |  provider: claude-local"
+  ]
+}

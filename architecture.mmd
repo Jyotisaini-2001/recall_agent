@@ -1,0 +1,166 @@
+%% SkillForge Architecture Diagrams
+%% View at https://mermaid.live or via any markdown renderer
+%% Multiple diagrams in one file separated by "---" comment blocks
+
+%% ============================================================
+%% Diagram 1 — System Architecture (high level)
+%% ============================================================
+
+graph TD
+    User[Developer] -->|opens .ipynb| NB[(Jupyter Notebook)]
+
+    NB -->|cell errors| Watcher
+    Watcher[Watcher Agent<br/>nbclient hook<br/>captures traceback + cell + ctx] -->|error signature| Retriever
+
+    Retriever[Retriever Agent<br/>embedding match] -.lookups.- SkillStore[(Skill Store<br/>YAML+MD files<br/>+ embedding sidecars)]
+
+    Retriever -->|HIT confidence > 0.80| Applier
+    Retriever -->|MISS or low confidence| Diagnoser
+
+    Diagnoser[Diagnoser Agent<br/>LLM reasoning<br/>Minimax / Gemini / Claude]
+    Diagnoser -->|structured fix| Distiller
+    Distiller[Distiller Agent<br/>distill fix into reusable skill]
+    Distiller -->|writes new skill| SkillStore
+    Distiller -->|fix code| Applier
+
+    Applier[Applier<br/>MCP server<br/>insert_fix_cell]
+    Applier -->|inserts fixed cell| NB
+
+    Applier -.exposed via MCP.- External[External Agents<br/>Claude Code · Cursor · etc.]
+
+    SkillStore -.served by.- MCP[MCP Server<br/>apply_skill / list_skills / record_fix]
+    MCP -.- External
+
+    classDef agent fill:#dbeafe,stroke:#2563eb,color:#1e40af
+    classDef store fill:#fef3c7,stroke:#d97706,color:#92400e
+    classDef external fill:#e0e7ff,stroke:#6366f1,color:#3730a3
+
+    class Watcher,Retriever,Diagnoser,Distiller,Applier agent
+    class SkillStore store
+    class External,NB external
+
+%% ============================================================
+%% Diagram 2 — FAST PATH vs SLOW PATH sequence
+%% ============================================================
+
+sequenceDiagram
+    autonumber
+    actor U as Developer
+    participant W as Watcher
+    participant R as Retriever
+    participant S as SkillStore
+    participant D as Diagnoser (LLM)
+    participant Di as Distiller
+    participant A as Applier
+
+    rect rgb(254, 243, 199)
+        Note over U,A: SLOW PATH — first encounter (~3000 tokens, ~8s)
+        U->>W: Cell errors (pandas dtype mismatch)
+        W->>R: traceback + cell + 2 prior cells
+        R->>S: embed(traceback) · cosine search
+        S-->>R: best match: 0.42 (below threshold)
+        R->>D: ask LLM for structured fix
+        D-->>R: { diagnosis, fix_code, confidence: 0.91 }
+        R->>Di: distill fix into reusable skill
+        Di->>S: write skills/pandas-dtype-mismatch.md + .npy
+        R->>A: apply fix_code
+        A->>U: insert fixed cell · cell turns green
+    end
+
+    rect rgb(220, 252, 231)
+        Note over U,A: FAST PATH — cache hit (~80 tokens, ~200ms)
+        U->>W: Cell errors (similar dtype mismatch, different column)
+        W->>R: traceback + cell + 2 prior cells
+        R->>S: embed(traceback) · cosine search
+        S-->>R: best match: pandas-dtype-mismatch · 0.92 (above threshold)
+        R->>A: apply skill template (no LLM call)
+        A->>U: insert fixed cell · cell turns green
+    end
+
+%% ============================================================
+%% Diagram 3 — Skill lifecycle state machine
+%% ============================================================
+
+stateDiagram-v2
+    [*] --> Empty: no fix attempted
+
+    Empty --> Diagnosing: cache MISS
+    Empty --> Applying: cache HIT (template ready)
+
+    Diagnosing --> Distilling: LLM returned valid fix
+    Diagnosing --> Failed: LLM failed / low confidence
+
+    Distilling --> Library: skill written to disk
+    Library --> [*]: ready for future cache hits
+
+    Applying --> Verifying: fix cell inserted + executed
+    Verifying --> Library: success (increment times_used)
+    Verifying --> Refining: success but partial · update skill
+    Verifying --> Failed: fix didn't work
+
+    Refining --> Library
+    Failed --> Diagnosing: retry with augmented context (max 2x)
+
+    state Library {
+        [*] --> Active
+        Active --> Stale: not used in N days
+        Stale --> Active: rehit
+        Stale --> Pruned: replaced by better skill (V2)
+    }
+
+%% ============================================================
+%% Diagram 4 — V1 vs V2 skill memory architecture
+%% ============================================================
+
+graph LR
+    subgraph V1[V1 — Hackathon Ship]
+        F1[skills/*.md<br/>flat folder]
+        E1[sentence-transformers<br/>cosine similarity]
+        F1 -.embeddings.- E1
+    end
+
+    subgraph V2[V2 — Self-improving]
+        G[graphify<br/>skill relationships]
+        P[PageIndex<br/>indexed retrieval]
+        C[llm-council<br/>multi-LLM consensus]
+        F2[skills/*.md<br/>+ relationship graph]
+        F2 -.- G
+        F2 -.- P
+        G -.- C
+        P -.- C
+    end
+
+    V1 ==>|"refactor month 2-3"| V2
+
+    classDef v1 fill:#fef3c7,stroke:#d97706
+    classDef v2 fill:#dbeafe,stroke:#2563eb
+
+    class F1,E1 v1
+    class G,P,C,F2 v2
+
+%% ============================================================
+%% Diagram 5 — Provider chain with cost gradient
+%% ============================================================
+
+graph LR
+    Trigger[Need LLM call] --> Q{Cache hit?}
+    Q -->|YES| Skip[Skip · use template]
+    Q -->|NO| Cheap[Try Minimax<br/>$ — primary]
+
+    Cheap -->|fail / unavailable| Free[Try Gemini<br/>$$ — free tier]
+    Free -->|fail / quota| Gold[Try Claude<br/>$$$ — gold standard]
+
+    Cheap -->|success| Done
+    Free -->|success| Done
+    Gold -->|success| Done
+
+    Done[Apply fix · log tokens]
+    Skip --> DoneFast[Apply fix · ~0 tokens]
+
+    classDef good fill:#dcfce7,stroke:#16a34a
+    classDef cheap fill:#fef3c7,stroke:#d97706
+    classDef premium fill:#fee2e2,stroke:#dc2626
+
+    class Skip,DoneFast good
+    class Cheap,Free cheap
+    class Gold premium
